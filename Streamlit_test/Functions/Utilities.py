@@ -343,6 +343,7 @@ def plot_forecast(frt, data_out,step_forecast=30,z_score=1):
     except:
         st.warning("El Frt seleccionado no se encuentra en el archivo de consumos actuales, favor revisar")
 
+@st.cache
 def check_dtype_data(df):
 
     cols=df.columns
@@ -366,7 +367,7 @@ def check_dtype_data(df):
     except:
         return False
                             
-
+@st.cache
 def check_dtype_frts(df):
 
     cols=df.columns
@@ -378,3 +379,51 @@ def check_dtype_frts(df):
             return False
     except:
         return False
+    
+@st.cache    
+def load_training(uploaded_files_Training):
+    data=pd.DataFrame()
+    sort_date=[]
+    check_files=0
+    count_files_training=0
+    sort_date_df=pd.DataFrame(columns=["File","Fecha"])
+    warnings=[]
+    for uploaded_file_training in uploaded_files_Training:
+        if Utilities.check_dtype_data(pd.read_excel(uploaded_file_training)):    
+            
+            datedf=pd.read_excel(uploaded_file_training)
+            datedf['Fecha']=pd.to_datetime(datedf['Fecha'])
+            prov_date=datedf['Fecha'].values.tolist()[0]
+            
+            sort_date.append([uploaded_file_training,prov_date])
+        else:
+            warnings+=["El archivo  " + uploaded_file_training.name + " no cumple con el formato, favor revisar los archivos de ejemplo"]
+            check_files=1
+    if check_files==0:
+        sort_date_df=pd.DataFrame(sort_date,columns=["File","Fecha"])
+        sort_date_df['Fecha']=pd.to_datetime(sort_date_df['Fecha'])        
+        sort_date_df.sort_values(by=['Fecha'],inplace=True)
+        for uploaded_file_training in sort_date_df['File']:
+                if count_files_training != 0:
+                    
+                    prov_data=pd.read_excel(uploaded_file_training)
+                    Fecha_Final=prov_data['Fecha'].values.tolist()[0]
+                    prov_data=prov_data.drop(columns=["Unnamed: 0",1,'Fecha']).drop_duplicates()
+                    data=pd.merge(left= data, right=prov_data,how="outer",left_on=0,right_on=0)
+                    st.write(uploaded_file_training.name)
+                if count_files_training==0:
+                    
+                    data=pd.read_excel(uploaded_file_training)
+                    Fecha_inicial=data['Fecha'].values.tolist()[0]
+                    Fecha_Final=Fecha_inicial
+                    data=data.drop(columns=["Unnamed: 0",1,'Fecha']).drop_duplicates()
+                    count_files_training=count_files_training+1
+                    st.write(uploaded_file_training.name)
+    
+        data.insert(1,"Fecha_Inicial",Fecha_inicial)
+        data.insert(2,"Fecha_Final",Fecha_Final)
+        data.Fecha_Inicial=pd.to_datetime(data.Fecha_Inicial)
+        data.Fecha_Final=pd.to_datetime(data.Fecha_Final)
+        data.fillna(0,inplace=True)
+        
+    return data,warnings
