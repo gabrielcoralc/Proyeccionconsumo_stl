@@ -339,7 +339,7 @@ def plot_forecast(frt, data_out,step_forecast=30,z_score=1):
                       width=800, height=400,
                       margin=dict(l=40, r=40, b=40, t=40))
         
-        return st.plotly_chart(fig)
+        return fig,forecast_mean,upper,lower
     except:
         st.warning("El Frt seleccionado no se encuentra en el archivo de consumos actuales, favor revisar")
 
@@ -380,7 +380,7 @@ def check_dtype_frts(df):
     except:
         return False
     
-@st.cache    
+    
 def load_training(uploaded_files_Training):
     data=pd.DataFrame()
     sort_date=[]
@@ -389,7 +389,7 @@ def load_training(uploaded_files_Training):
     sort_date_df=pd.DataFrame(columns=["File","Fecha"])
     warnings=[]
     for uploaded_file_training in uploaded_files_Training:
-        if Utilities.check_dtype_data(pd.read_excel(uploaded_file_training)):    
+        if check_dtype_data(pd.read_excel(uploaded_file_training)):    
             
             datedf=pd.read_excel(uploaded_file_training)
             datedf['Fecha']=pd.to_datetime(datedf['Fecha'])
@@ -427,3 +427,25 @@ def load_training(uploaded_files_Training):
         data.fillna(0,inplace=True)
         
     return data,warnings
+
+def Massive_trends(data):
+    
+    data.fillna(0,inplace=True)
+    data[0]=data[0].apply(lambda x: x.lower())
+    #step_forecast=30 #Numero de dias a predecir, en un futuro hay que validar que esto sea menor o igual a la cantidad 
+                     #de dias reales a comparar con la prediccion
+    frts=data[0].values.tolist()
+    data_pred=[]
+
+    for Frt in frts:
+
+        training = data[data[0]==Frt].values.tolist()[0][3:]
+        training=np.array(training)
+        tendecia_mensual=group_trends_(training,30,11)
+        tendecia_mensual=[tendecia_mensual[i] for i in [1,4,9]]
+        tendecia_trimestral=group_trends_(training,90,1)
+        promedio_mensual=np.round(np.average(np.array(group_list(training,30))),2)
+        data_pred.append([Frt,promedio_mensual]+tendecia_mensual+tendecia_trimestral)
+    data_pred_df=pd.DataFrame(data_pred,columns=["CODIGO_SIC","Consumo_Promedio","Tendencia_mes_3","Tendencia_mes_6","Tendencia_mes_12","Tendencia_trimestral"])
+    data_pred_df.fillna(0,inplace=True)
+    return data_pred_df

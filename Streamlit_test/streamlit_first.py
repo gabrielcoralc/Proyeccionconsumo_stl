@@ -149,8 +149,9 @@ def plotting(data_out):
     st.write("""## 3. Plot training, Forecasting and actual data
                      """)
     
+    data_forecast=None
     onlyfiles = [f for f in listdir("Models/") if isfile(join("Models/", f))]
-    onlyfiles= [f[0:8] for f in onlyfiles]
+    onlyfiles= [f.split('_')[0] for f in onlyfiles]
     Frt_trained=st.selectbox("Select Frt to plot",onlyfiles) 
     if (len(data_out) != 0) :
         colss=data_out.shape[1]-2
@@ -160,10 +161,46 @@ def plotting(data_out):
     if st.button('Show Plot'):
         if (len(data_out) != 0):
     
-            Utilities.plot_forecast(Frt_trained, data_out,step_forecast3,z_score3)
+            fig,forecast_mean,upper,lower=Utilities.plot_forecast(Frt_trained, data_out,step_forecast3,z_score3)
+            st.plotly_chart(fig)
+            data_forecast=pd.DataFrame([["Prediccion_Media"]+forecast_mean.tolist(),["Prediccion_Inferior"]+upper.tolist(),["Prediccion_Superior"]+lower.tolist()])
         else:
             st.warning("Please check that all neccesary files have been upload or check if you select a valid Frt")
+    
+    return data_forecast
     #######################################
+
+def trends_massive():
+    #######################################
+    
+    ##CUARTA SECCION
+    #######################################
+    st.write("""## 4. Calculate trends for all Frts
+             """)
+    st.write("Calcula las tendencias en diferentes rangos de 30 dias para todos los Frts")
+    
+    ##CARGA DATA DE ENTRENAMIENTO    
+    uploaded_files_Trend = st.file_uploader('Load training data to calculate trends',accept_multiple_files=1,type=['xlsx'])   
+    ##Data a retornar
+    data_pred=None 
+    if uploaded_files_Trend:
+        if st.button('Get trends'):
+            ##CARGA DATA DE ENTRENAMIENTO    
+            
+            data,warnings = Utilities.load_training(uploaded_files_Trend)
+            if len(warnings)!=0:
+                for w in warnings:
+                    st.warning(w)
+            if (len(data) != 0):
+                st.success('All files have uploaded successfully')
+                data_pred= Utilities.Massive_trends(data)
+            else:
+                st.warning("Please check that all neccesary files have been upload")
+    
+    return data_pred
+
+
+
 
 def main():
     
@@ -178,8 +215,15 @@ def main():
         st.write('Prediction complete, check the links below to download the results')
         st.markdown(filedownload(data_pred2,"Resultados_Predicion"), unsafe_allow_html=True)
         st.markdown(filedownload(check_pred2,"Frts_Revisar"), unsafe_allow_html=True)
-    plotting(data_out)
-
+    data_forecast=plotting(data_out)
+    if data_forecast is not None:
+        st.write('Forecast calculation complete, check the links below to download the results')
+        st.markdown(filedownload(data_forecast,"Resultados_predicciones"), unsafe_allow_html=True)
+    data_trend=trends_massive()
+    if data_trend is not None:
+        st.write('Trends calculation complete, check the links below to download the results')
+        st.markdown(filedownload(data_trend,"Resultados_Tendencias"), unsafe_allow_html=True)
+        
 st.set_option('deprecation.showPyplotGlobalUse', False)
 main()
 
