@@ -6,7 +6,7 @@ Created on Sun Jan 31 15:58:45 2021
 """
 
 
-from matplotlib import pylab as plt
+
 import plotly.graph_objects as go
 
 import numpy as np
@@ -22,12 +22,25 @@ import joblib
 from sklearn.linear_model import LinearRegression
 from itertools import islice
 
-import time
+
 
 import streamlit as st
 tf.enable_v2_behavior()
 
 def trend_(list_of_lists_sums,cut):
+    """La funcion calcula la tendencia de una serie de tiempo y la divide entre el promedio de la misma serie, 
+        retornando asi el valor porcentaje de variancion entre la pendiente y el promedio
+    Parameters
+    ----------
+    list_of_lists_sums : list
+        lista que contiene la serie de tiempo
+    cut : int
+        El numero de valores que se va a tomar de la lista
+    Returns
+    -------
+    float:
+        Retorna la variancion entre la pendiente y el promedio de la serie de tiempo
+    """
     try:
         model = LinearRegression()
         return model.fit(np.arange(len(list_of_lists_sums[-cut:])).reshape(-1, 1),np.array(list_of_lists_sums[-cut:])).coef_[0]*100/np.average(np.array(list_of_lists_sums[-cut:]))
@@ -35,17 +48,66 @@ def trend_(list_of_lists_sums,cut):
         return 0
     
 def group_list(timesr,days):
+    
+    """La funcion separa en diferentes listas la serie de tiempo. el largo de cada lista esta definido por el valor
+        de days y luego las suma, dando asi valores agregados como por ejemplo semanalmente, quincenal o mensual
+    Parameters
+    ----------
+    timesr : list
+        lista que contiene la serie de tiempo
+    days : int
+        El numero de dias que define los intervalos de agregacion
+    Returns
+    -------
+    list:
+        Retorna la serie de tiempo con los valores agregados segun un intervalo
+    """
     list_of_lists = [ list(islice(reversed(timesr), i*days, (i+1)*days)) for i in range(int(len(timesr) / days ))]
     list_of_lists_sums=list(reversed([np.sum(x) for x in list_of_lists]))
+    
     return list_of_lists_sums
     
 def group_trends_(timesr,days,groups=1):
+    
+    """La funcion hace uso de las funciones group_list y la funcion trend_, para calcular multiples tendencias.
+    Un ejemplo es, se tiene una serie de tiempo con informacion diaria, pero tu quieres conocer la tendencia de consumo mensual,
+    de los ultimos 3 meses, por lo que se usaria group_list(timesr,30) para generar la serie de tiempo mensual y por ultimo
+    ingresamos groups=1, para que calcule la tendencia de los ultimos 3 meses.
+    La tendencia minima se puede realizar solamente con 3 valores, sino el algortimo lo valida en la funcion tred_ y retona un 0
+    en el valor de la tendencia o si los consumos son todos ceros
+    Parameters
+    ----------
+    timesr : list
+        lista que contiene la serie de tiempo
+    days : int
+        El numero de dias que define los intervalos de agregacion
+    groups : int
+        Representa al numero de valores con los que se va a calcular la tendencia, si es mayor 1 retorna multiples tendencia,
+        dando a entender que la primera tendencia calculada corresponde a 3 valores y las tendencia que continuan tendran un valor
+        adicional con el cual fueron calculadas.
+    Returns
+    -------
+    list:
+        Retorna una lista de tendencias
+    """
     list_of_lists_sums = group_list(timesr,days)
     trends = [np.round(trend_(list_of_lists_sums,i),2) for i in range(2,groups+2)]
     return trends
 
 
 def build_model(observed_time_series):
+    
+    """Se crea el modelo con el cual se va a predecir el siguiente valor de una serie de tiempo.
+        Utilizamos la libreria de tensorflow_probability para esto
+    Parameters
+    ----------
+    observed_time_series : list
+        lista que contiene la serie de tiempo
+    Returns
+    -------
+    object:
+        Retorna un objecto creado con la clase tensorflow_probability.sts"""
+    
     day_of_month_effect = sts.SmoothSeasonal(
       period=30,frequency_multipliers= [1,2,3],
       observed_time_series=observed_time_series,
@@ -66,6 +128,21 @@ def build_model(observed_time_series):
 
 def train(energy_model,training):
     
+    """Entrenamos el modelo creado apartir de la funcion build_model()
+    Parameters
+    ----------
+    energy_model : obj
+        modelo de tensor_flow
+    training : list
+        Serie de tiempo
+    Returns
+    -------
+    object:
+        elbo_loss_curve : list
+            Retorna la curva de entrenamiento del modelo
+        variational_posteriors : obj
+            Objeto utilizado por tensor flow para hacer las predicciones, podemos considerarlo como nuestro modelo entrenado
+        Retorna un objecto creado con la clase tensorflow_probability.sts"""
     # Allow external control of optimization to reduce test runtimes.
     num_variational_steps = 100 # @param { isTemplate: true}
     num_variational_steps = int(num_variational_steps)
@@ -85,6 +162,29 @@ def train(energy_model,training):
 
 
 def Massive_training_pred(Frts,data_out,data,step_forecast=30,z_score=1):
+        
+    """Entrenamos el multiples modelos creado apartir de la funcion build_model() y hacemos la prediccion de valores posibles a futuro
+    Parameters
+    ----------
+    Frts : list
+        Una lista que contiene los codigos que se van a buscar en el dataframe 
+    data_out : dataframe
+        Un dataframe con las series de tiempo que se van a comparar con las predicciones
+    data : dataframe
+        Un dataframe con las series de tiempo que se utilizaran para entrenar los modelos
+    step_forecast: int
+        numero de pasos en el futuro que se van a predecir
+    z_score: int
+        numero de desviaciones estandar en la prediccion para la deteccion de anomalias
+    Returns
+    -------
+    object:
+        data_pred_df : dataframe
+            Retorna un  dataframe con algunos caculos realizados a partir de las predicciones hechar
+        check_pred_df : dataframe
+            dataframe con las observaciones pertinentes cuando no pudo realizar las prediccion en alguno 
+            de los codigos seleccionados
+        Adicionalmente se guardan los datos de entrenamiento y los modelos calculados en sus repectivas rutas"""
     Frts["FRTS"]=Frts["FRTS"].apply(lambda x: x.lower())
     frts=Frts["FRTS"].values.tolist()
     
@@ -183,6 +283,26 @@ def Massive_training_pred(Frts,data_out,data,step_forecast=30,z_score=1):
     return data_pred_df,check_pred_df
 
 def Massive_pred(frts,data_out,step_forecast=30,z_score=1):
+    
+    """Predecimos n pasos posibles valores en el futuro de modelos previamente entrenados
+    Parameters
+    ----------
+    Frts : list
+        Una lista que contiene los codigos que se van a buscar en el dataframe 
+    data_out : dataframe
+        Un dataframe con las series de tiempo que se van a comparar con las predicciones
+    step_forecast: int
+        numero de pasos en el futuro que se van a predecir
+    z_score: int
+        numero de desviaciones estandar en la prediccion para la deteccion de anomalias
+    Returns
+    -------
+    object:
+        data_pred_df : dataframe
+            Retorna un  dataframe con algunos caculos realizados a partir de las predicciones hechar
+        check_pred_df : dataframe
+            dataframe con las observaciones pertinentes cuando no pudo realizar las prediccion en alguno 
+            de los codigos seleccionados"""
     data_out[0]=data_out[0].apply(lambda x: x.lower())
     
     #step_forecast=30 #Numero de dias a predecir, en un futuro hay que validar que esto sea menor o igual a la cantidad 
@@ -252,6 +372,29 @@ def Massive_pred(frts,data_out,step_forecast=30,z_score=1):
 
 def plot_forecast(frt, data_out,step_forecast=30,z_score=1):
     
+    """Entrega una figura interactiva creada en plotly de los valores de entrenamiento,
+        prediccion y anomalias detectadas
+    ----------
+    Frts : list
+        Una lista que contiene los codigos que se van a buscar en el dataframe 
+    data_out : dataframe
+        Un dataframe con las series de tiempo que se van a comparar con las predicciones
+    step_forecast: int
+        numero de pasos en el futuro que se van a predecir
+    z_score: int
+        numero de desviaciones estandar en la prediccion para la deteccion de anomalias
+    Returns
+    -------
+    object:
+        fig : Object
+            Una figura creada a partir de plotly
+        forecast_mean : list
+            lista con la media de los valores que obtuvo la prediccion
+        upper : list
+            lista con el limite superior de los valores que obtuvo la prediccion
+        lower : list
+            lista con el limite inferior de los valores que obtuvo la prediccion
+            de los codigos seleccionados"""
     try:
         data_out[0]=data_out[0].apply(lambda x: x.lower())#Esta es la data de los valores reales que se compara con la prediccion
         real=data_out[data_out[0]==frt].values[0][2:]
@@ -345,7 +488,17 @@ def plot_forecast(frt, data_out,step_forecast=30,z_score=1):
 
 @st.cache
 def check_dtype_data(df):
+    
+    """La funcion verifica que el dataframe cargado cumpla ciertas caracteristicas para que sea valid
+    ----------
+    df : dataframe
+        dataframe con la informacion de las series de tiempo de cada codigo a utilizar
 
+    Returns
+    -------
+    boolean:
+        Retorna True o False si el dataframe cumple ciertas caracteristicas
+    """
     cols=df.columns
     types=df.dtypes
     try:
@@ -369,7 +522,17 @@ def check_dtype_data(df):
                             
 @st.cache
 def check_dtype_frts(df):
+    
+    """La funcion verifica que el dataframe cargado cumpla ciertas caracteristicas para que sea valid
+    ----------
+    df : dataframe
+        dataframe con la informacion de los codigos que se quiere utilizar
 
+    Returns
+    -------
+    boolean:
+        Retorna True o False si el dataframe cumple ciertas caracteristicas
+    """
     cols=df.columns
     types=df.dtypes
     try: 
@@ -382,6 +545,20 @@ def check_dtype_frts(df):
     
     
 def load_training(uploaded_files_Training):
+    
+    """La funcion verifica el orden que se deberian unir los archivos con las series de tiempo cargados
+        de esta manera se asegura que a pesar de que se suban archivos en desorden, la informacion este ordenada
+    ----------
+    uploaded_files_Training : object
+        Un objeto creado por streamlit, con la informacion de todos los archivos creados
+
+    Returns
+    -------
+    data : dataframe
+        Retorna un dataframe con toda la informacion ordenada por fecha
+    warnings : object
+        Un objecto de streamlit que dispara una advertencia cuando un archivo esta mal subido
+    """
     data=pd.DataFrame()
     sort_date=[]
     check_files=0
@@ -429,6 +606,17 @@ def load_training(uploaded_files_Training):
     return data,warnings
 
 def Massive_trends(data):
+    
+    """La funcion realiza calculos de tendecias sobre la informacion cargada sin tener en cuenta las predicciones
+    ----------
+    data : dataframe
+        dataframe que contiene todas las series de tiempo de los codigos
+
+    Returns
+    -------
+    data_pred_df : dataframe
+        Retorna un dataframe con los calculos de tendencias de todos los codigos
+    """
     
     data.fillna(0,inplace=True)
     data[0]=data[0].apply(lambda x: x.lower())
