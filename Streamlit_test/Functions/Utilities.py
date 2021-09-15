@@ -14,7 +14,6 @@ import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
 
 
-from tensorflow_probability import distributions as tfd
 from tensorflow_probability import sts
 import pandas as pd
 import joblib

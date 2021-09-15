@@ -18,6 +18,18 @@ from os.path import isfile, join
 
 
 def filedownload(df,filename):
+    """La funcion realiza la transformacion de un dataframe a un archivo en csv que puedo ser
+    descargado mediante un link
+    ----------
+    df : dataframe
+        dataframe que se va a transformar en archivo csv
+    filename : string
+        Nombre que tendra el archivo
+    Returns
+    -------
+    object:
+        Un enlace que se puede emplear junto streamlit para que se decargue un archivo en csv
+    """    
     filename=filename + ".csv"
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
@@ -26,6 +38,8 @@ def filedownload(df,filename):
 
 
 def actual_data():
+    #Funcion utilizada para mantener orden en la creacion de la pagina con streamlit
+    #Es usada en la funcion main()
     ###HEADER
     #################################
     st.title("""Mi Primera app de proyeccion de consumos""")
@@ -47,6 +61,8 @@ def actual_data():
 
 
 def training_massive(data_out):
+    #Funcion utilizada para mantener orden en la creacion de la pagina con streamlit
+    #Es usada en la funcion main()
     #######################################
     
     ##PRIMERA SECCION
@@ -101,11 +117,14 @@ def training_massive(data_out):
 
 
 def forecasting(data_out):
-
+    
+    #Funcion utilizada para mantener orden en la creacion de la pagina con streamlit
+    #Es usada en la funcion main()
 #######################################
 
 #SEGUNDA SECCION
 #######################################
+    
     st.write("""## 2. Forecasting (Massive) for models already trained
                      """)
     
@@ -142,6 +161,8 @@ def forecasting(data_out):
 
 
 def plotting(data_out):
+    #Funcion utilizada para mantener orden en la creacion de la pagina con streamlit
+    #Es usada en la funcion main()
     #######################################
     
     #TERCERA SECCION
@@ -171,6 +192,8 @@ def plotting(data_out):
     #######################################
 
 def trends_massive():
+    #Funcion utilizada para mantener orden en la creacion de la pagina con streamlit
+    #Es usada en la funcion main()
     #######################################
     
     ##CUARTA SECCION
@@ -203,7 +226,7 @@ def trends_massive():
 
 
 def main():
-    
+    #Funcion principal para mantener una estructura simple en la creacion de la pagina web que despliega streamlit
     data_out=actual_data()
     data_pred,check_pred = training_massive(data_out)
     if data_pred is not None and check_pred is not None:
