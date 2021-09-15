@@ -110,7 +110,7 @@ def forecasting(data_out):
                      """)
     
     onlyfiles = [f for f in listdir("Models/") if isfile(join("Models/", f))]
-    onlyfiles= [f[0:8] for f in onlyfiles]
+    onlyfiles= [f.split('_')[0] for f in onlyfiles]
     
     if st.button('Add All option'):
         Frts_trained=st.multiselect("Select Frts to forecast",onlyfiles,default=onlyfiles,key="Frts")

@@ -186,7 +186,7 @@ def Massive_training_pred(Frts,data_out,data,step_forecast=30,z_score=1):
             de los codigos seleccionados
         Adicionalmente se guardan los datos de entrenamiento y los modelos calculados en sus repectivas rutas"""
     Frts["FRTS"]=Frts["FRTS"].apply(lambda x: x.lower())
-    frts=Frts["FRTS"].values.tolist()
+    frts=Frts["FRTS"].values.tolist() #Los codigos para identificar los registros no pueden tener "_" o causaran problemas
     
     data_out[0]=data_out[0].apply(lambda x: x.lower())
     data[0]=data[0].apply(lambda x: x.lower())
