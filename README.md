@@ -45,4 +45,4 @@ Finalmente la parte que visualmente la mas llamativa de la aplicacion y que perm
 
 ## Conclusion
 
-Finalmente dejo el comentario de que el codigo tiene bastante espacio para ser mejorado y mucho mas eficiente, pero para un trabajo basico realiza lo que se pretenden con buenos resultados
+Finalmente dejo el comentario de que el codigo tiene bastante espacio para ser mejorado y ser mucho mas eficiente, pero para un trabajo basico realiza lo que se pretenden con buenos resultados.
